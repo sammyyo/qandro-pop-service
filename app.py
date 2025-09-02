@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 from shapely.geometry import shape
 import os
+from typing import Any, Dict
 import json
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -25,10 +26,8 @@ app.add_middleware(
 )
 
 
-
-
 class SumReq(BaseModel):
-    polygon_geojson: dict   # can be Feature or Geometry
+    polygon_geojson: Dict[str, Any]
     year: int = 2023
 
 WORLDPOP = {
