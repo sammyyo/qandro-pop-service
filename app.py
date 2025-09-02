@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException, Header
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from shapely.geometry import shape
 import os
 import json
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Qandro Population Service")
 
@@ -12,6 +12,7 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://qandro.com",
+    "https://www.qandro.com",
 ]
 
 app.add_middleware(
@@ -22,6 +23,9 @@ app.add_middleware(
     allow_headers=["*"],
     max_age=600,
 )
+
+
+
 
 class SumReq(BaseModel):
     polygon_geojson: dict   # can be Feature or Geometry
@@ -96,30 +100,35 @@ def sum_population(req: SumReq, authorization: str = Header(default="")):
             if not geom.intersects(raster_box):
                 raise HTTPException(status_code=400, detail="Polygon outside raster coverage")
 
-            # WorldPop is EPSG:4326 (WGS84). Ensure your polygon is also WGS84.
-            out, _ = mask(src, [geom.__geo_interface__], crop=True, filled=False)
+            # NOTE: WorldPop is EPSG:4326 (lat/lon). Ensure your polygon is also in WGS84.
+            out, out_transform = mask(src, [geom.__geo_interface__], crop=True, filled=False)
             band = out[0]  # masked array
 
-            if hasattr(band, "mask"):  # masked array
-                pop_sum = float(band.sum())
-                count = int(band.count())
+            # Sum only valid (unmasked) cells
+            if np.ma.is_masked(band):
+                pop_sum = float(band.sum())  # masked cells won't contribute
+                count = int(band.count())    # number of unmasked cells
             else:
+                # fallback if not masked
                 valid = band[band >= 0]
                 pop_sum = float(valid.sum()) if valid.size else 0.0
                 count = int(valid.size)
 
+            pop = int(round(pop_sum))
             return {
-                "population": int(round(pop_sum)),
+                "population": pop,
                 "cells": count,
                 "year": req.year,
-                "source": "worldpop",
+                "source": "worldpop"
             }
-
+    
+        
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Raster error: {e}")
-
+    
 @app.get("/sum")
 def sum_help():
     return {"error": "Use POST /sum with JSON body { polygon_geojson, year }"}
+
