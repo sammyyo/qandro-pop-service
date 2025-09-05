@@ -1,27 +1,24 @@
 # qandro-pop-service/Dockerfile
 FROM python:3.11-slim
 
-# System deps for rasterio/GDAL
-# NOTE: remove 'libgdal32' (not present on this base)
+# Minimal runtime libraries only, no system GDAL to avoid conflicts
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gdal-bin libgdal-dev proj-bin libproj-dev ca-certificates && \
+    curl ca-certificates libstdc++6 && \
     rm -rf /var/lib/apt/lists/*
-
-# (Usually not needed if rasterio wheel bundles GDAL, but harmless)
-ENV GDAL_DATA=/usr/share/gdal
-ENV PROJ_LIB=/usr/share/proj
 
 WORKDIR /app
 
+# Install Python dependencies with rasterio wheel (bundled GDAL)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy code + raster
-COPY app.py ./app.py
-COPY data ./data
+# Copy everything into the container
+COPY . .
 
-# Point app at the raster inside the image
+# Set environment variables
 ENV WORLDPOP_2023_PATH=/app/data/worldpop_2023_region.tif
+ENV PYTHONUNBUFFERED=1
 
-EXPOSE 8000
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Railway automatically sets PORT, so bind to it
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "$PORT", "--proxy-headers"]
+
