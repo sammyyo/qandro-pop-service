@@ -31,7 +31,7 @@ class SumReq(BaseModel):
     year: int = 2023
 
 WORLDPOP = {
-    2023: os.getenv("WORLDPOP_2023_PATH", "data/worldpop_2023_region.tif")
+    2023: os.getenv("WORLDPOP_2023_PATH", "/data/worldpop_2023_region.tif")
 }
 
 # Optional simple token (if you want to enforce POP_SERVICE_TOKEN)
