@@ -23,5 +23,5 @@ COPY data ./data
 # Point app at the raster inside the image
 ENV WORLDPOP_2023_PATH=/app/data/worldpop_2023_region.tif
 
-EXPOSE 8080
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
+EXPOSE 8000
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
